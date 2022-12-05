@@ -131,6 +131,7 @@
 >Fullscreen</button>
 
 <canvas
+  class="absolute top-0 left-0 bg-black z-[-1] touch-none focus:outline-0"
   bind:this={canvas}
   on:pointermove={onpointermove}
   on:keyup={userInput.bindToKeyup}
@@ -141,12 +142,6 @@
 
 <style>
   canvas {
-    position: absolute;
-    top: 0;
-    left: 0;
-    background-color: black;
-    z-index: -1;
-    touch-action: none;
     -webkit-tap-highlight-color: transparent;
   }
 </style>
