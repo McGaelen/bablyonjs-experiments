@@ -1,3 +1,14 @@
+/* Write your global styles here, in PostCSS syntax */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+h1 {
+  @apply text-2xl font-bold;
+}
+
 body {
   margin: 0;
+  font-family: sans-serif;
+  color: white;
 }
