@@ -4,7 +4,7 @@ import {writable} from "svelte/store";
 const pressedKeys = new Set()
 const {subscribe, update} = writable(pressedKeys)
 
-export const userInput = {
+export const keyboard = {
   subscribe,
 
   /** @param event {KeyboardEvent} */
