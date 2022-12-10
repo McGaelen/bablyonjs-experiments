@@ -1,18 +1,10 @@
 <script>
   import {onMount} from "svelte";
-  import {gameClock} from "./lib/stores/gameClock.store.js";
   import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
   import {pointerLock} from "./lib/stores/pointerLock.store.js";
   import {userInput} from "./lib/stores/userInput.store.js"
-  import {
-    BoxGeometry,
-    DirectionalLight,
-    Mesh, MeshBasicMaterial,
-    MeshToonMaterial, PerspectiveCamera,
-    PlaneGeometry, Scene,
-    Vector3,
-    WebGLRenderer
-  } from "three";
+  import * as THREE from 'three'
+  import RAPIER from "@dimforge/rapier3d-compat";
 
   /** @type HTMLCanvasElement */
   let canvas
@@ -30,67 +22,122 @@
   }
 
   onMount(async () => {
-    renderer = new WebGLRenderer({canvas});
-    camera = new PerspectiveCamera(75, 1, 0.1, 1000)
+    renderer = new THREE.WebGLRenderer({canvas});
+    renderer.shadowMap.enabled = true
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
+    camera.rotation.order = "YXZ"
+    camera.position.z = 7
+    camera.position.y = -5
+    camera.rotation.x = -0.5
     setSize()
 
-    const scene =  new Scene()
-    const boxGeo = new BoxGeometry(2,2,2,2)
-    const boxMat = new MeshBasicMaterial({color: 0x00ff00})
-    const box = new Mesh(boxGeo, boxMat)
-    scene.add(box)
+    let gravity = { x: 0.0, y: -9.81, z: 0.0 }
+    let world = new RAPIER.World(gravity)
+    const scene =  new THREE.Scene()
 
-    const planeGeo = new PlaneGeometry(3, 3)
-    const planeMat = new MeshToonMaterial()
-    const plane = new Mesh(planeGeo, planeMat)
+    let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 0.1, 10.0)
+        .setTranslation(0, -10, 0)
+    world.createCollider(groundColliderDesc)
+    const planeGeo = new THREE.PlaneGeometry(10, 10)
+    const planeMat = new THREE.MeshToonMaterial()
+    const plane = new THREE.Mesh(planeGeo, planeMat)
+    plane.position.set(0, -10.0, 0)
+    plane.rotation.set(3 * Math.PI / 2, 0, 0)
+    plane.receiveShadow = true
     scene.add(plane)
 
-    const light = new DirectionalLight(0xffffff, 0.5)
+    let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
+        .setTranslation(0.0, 1.0, 0.0)
+    let rigidBody = world.createRigidBody(rigidBodyDesc)
+    let colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1)
+    let collider = world.createCollider(colliderDesc, rigidBody)
+    rigidBody.applyTorqueImpulse(new RAPIER.Vector3(
+        Math.random() * 2, Math.random() * 2, Math.random() * 2), true)
+    const boxGeo = new THREE.BoxGeometry(2,2,2)
+    const boxMat = new THREE.MeshToonMaterial({color: 0xff0000})
+    const box = new THREE.Mesh(boxGeo, boxMat)
+    box.castShadow = true
+    scene.add(box)
+
+
+
+
+    const light = new THREE.DirectionalLight(0xffffff, 0.7)
+    light.castShadow = true
+    light.position.set(0, 15, -7)
     scene.add(light)
 
-    const loader = new GLTFLoader();
-    const data = await loader.loadAsync('/src/assets/scene.gltf', (event) => console.log(event))
-    scene.add(data.scene)
+    // const loader = new GLTFLoader();
+    // const data = await loader.loadAsync('/src/assets/scene.gltf', (event) => console.log(event))
+    // scene.add(data.scene)
 
-    camera.rotation.order = "YXZ"
-    camera.position.z = 6;
 
-    gameClock.subscribe(() => {
-      const dir = camera.getWorldDirection(new Vector3())
+
+    let prevTime = 0
+    renderer.setAnimationLoop((time) => {
+      const delta = time - prevTime
+      const dir = camera.getWorldDirection(new THREE.Vector3())
+
+      world.timestep = delta / 1000
+      world.step()
+
+
+      let rotation = rigidBody.rotation()
+
+      console.log('rigidBody rotation: ', rotation.x, rotation.y, rotation.z)
+
       if ($userInput.has('w')) {
         const relativeForward = dir.clone()
         camera.position.addScaledVector(
-            new Vector3(relativeForward.x, 0, relativeForward.z), 0.05
+            new THREE.Vector3(relativeForward.x, 0, relativeForward.z), 0.005 * delta
         )
       }
       if ($userInput.has('s')) {
-        const relativeBack = dir.clone().applyAxisAngle(new Vector3(0, 1, 0), Math.PI)
+        const relativeBack = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
         camera.position.addScaledVector(
-            new Vector3(relativeBack.x, 0, relativeBack.z), 0.05
+            new THREE.Vector3(relativeBack.x, 0, relativeBack.z), 0.005 * delta
         )
       }
       if ($userInput.has('a')) {
-        const relativeLeft = dir.clone().applyAxisAngle(new Vector3(0, 1, 0), Math.PI / 2)
+        const relativeLeft = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
         camera.position.addScaledVector(
-            new Vector3(relativeLeft.x, 0, relativeLeft.z), 0.05
+            new THREE.Vector3(relativeLeft.x, 0, relativeLeft.z), 0.005 * delta
         )
       }
       if ($userInput.has('d')) {
-        const relativeRight = dir.clone().applyAxisAngle(new Vector3(0, 1, 0), (3 * Math.PI) / 2)
+        const relativeRight = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (3 * Math.PI) / 2)
         camera.position.addScaledVector(
-            new Vector3(relativeRight.x, 0, relativeRight.z), 0.05
+            new THREE.Vector3(relativeRight.x, 0, relativeRight.z), 0.005 * delta
         )
       }
       if ($userInput.has(' ')) {
-        camera.position.y += 0.05
+        camera.position.y += 0.005 * delta
       }
       if ($userInput.has('Control')) {
-        camera.position.y -= 0.05
+        camera.position.y -= 0.005 * delta
       }
 
-      box.rotation.x += 0.01;
-      box.rotation.y += 0.01;
-      box.rotation.z += 0.01;
+
+      // box.rotation.x = rotation.x
+      // box.rotation.y = rotation.y
+      // box.rotation.z = rotation.z
+      const quat = new THREE.Quaternion(rotation.x, rotation.y, rotation.z, rotation.w)
+      box.rotation.setFromQuaternion(quat)
+      box.position.x = rigidBody.translation().x
+      box.position.y = rigidBody.translation().y
+      box.position.z = rigidBody.translation().z
+
+      // const translation = rigidBody.translation()
+      // const boxPosition = new THREE.Vector3()
+      // box.getWorldPosition(boxPosition)
+      // boxPosition.set(translation.x, translation.y, translation.z)
+      // box.position.copy(boxPosition)
+
+
+      // console.log('box rotation: ', box.rotation)
+
+      prevTime = time
       renderer.render(scene, camera)
     })
   })
@@ -108,14 +155,13 @@
 
 <svelte:window on:load={setSize} on:resize={setSize}/>
 
-<h1>{$gameClock}</h1>
 <h3>Camera</h3>
 
 <div class="ml-5">
   <span>Rotation:</span>
-  <span><b>X: </b>{camera?.getWorldDirection(new Vector3()).x.toFixed(3)}</span>
-  <span><b>Y: </b>{camera?.getWorldDirection(new Vector3()).y.toFixed(3)}</span>
-  <span><b>Z: </b>{camera?.getWorldDirection(new Vector3()).z.toFixed(3)}</span>
+  <span><b>X: </b>{camera?.getWorldDirection(new THREE.Vector3()).x.toFixed(3)}</span>
+  <span><b>Y: </b>{camera?.getWorldDirection(new THREE.Vector3()).y.toFixed(3)}</span>
+  <span><b>Z: </b>{camera?.getWorldDirection(new THREE.Vector3()).z.toFixed(3)}</span>
 </div>
 
 <div class="ml-5">
