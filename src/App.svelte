@@ -1,59 +1,53 @@
 <script>
   import {onMount} from "svelte";
-  import {GLTFLoader} from "three/examples/jsm/loaders/GLTFLoader.js";
   import {pointerLock} from "./lib/stores/pointerLock.store.js";
   import {userInput} from "./lib/stores/userInput.store.js"
   import * as THREE from 'three'
   import RAPIER from "@dimforge/rapier3d-compat";
+  import {setContext} from 'svelte'
+  import Plane from "./lib/Plane.svelte";
+
+
+  /** @type THREE.WebGLRenderer */
+  let renderer
+  /** @type THREE.Scene */
+  let scene
+  /** @type RAPIER.World */
+  let physics
+  setContext('game', {
+    get renderer() { return renderer },
+    get scene() { return scene },
+    get physics() { return physics }
+  })
 
   /** @type HTMLCanvasElement */
   let canvas
-  /** @type THREE.WebGLRenderer */
-  let renderer
   /** @type THREE.PerspectiveCamera */
   let camera
-
-  function setSize() {
-    renderer.setSize(window.innerWidth, window.innerHeight)
-    camera.aspect = window.innerWidth / window.innerHeight
-    camera.updateProjectionMatrix()
-    canvas.height = window.innerHeight
-    canvas.width = window.innerWidth
-  }
 
   onMount(async () => {
     renderer = new THREE.WebGLRenderer({canvas});
     renderer.shadowMap.enabled = true
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap
+    physics = new RAPIER.World({ x: 0.0, y: -9.81, z: 0.0 })
+    scene = new THREE.Scene()
+
+
     camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
     camera.rotation.order = "YXZ"
     camera.position.z = 7
     camera.position.y = -5
-    camera.rotation.x = -0.5
+    camera.rotation.x = -0.7
     setSize()
 
-    let gravity = { x: 0.0, y: -9.81, z: 0.0 }
-    let world = new RAPIER.World(gravity)
-    const scene =  new THREE.Scene()
 
-    let groundColliderDesc = RAPIER.ColliderDesc.cuboid(10.0, 0.1, 10.0)
-        .setTranslation(0, -10, 0)
-    world.createCollider(groundColliderDesc)
-    const planeGeo = new THREE.PlaneGeometry(10, 10)
-    const planeMat = new THREE.MeshToonMaterial()
-    const plane = new THREE.Mesh(planeGeo, planeMat)
-    plane.position.set(0, -10.0, 0)
-    plane.rotation.set(3 * Math.PI / 2, 0, 0)
-    plane.receiveShadow = true
-    scene.add(plane)
 
     let rigidBodyDesc = RAPIER.RigidBodyDesc.dynamic()
         .setTranslation(0.0, 1.0, 0.0)
-    let rigidBody = world.createRigidBody(rigidBodyDesc)
+    let rigidBody = physics.createRigidBody(rigidBodyDesc)
     let colliderDesc = RAPIER.ColliderDesc.cuboid(1, 1, 1)
-    let collider = world.createCollider(colliderDesc, rigidBody)
+    let collider = physics.createCollider(colliderDesc, rigidBody)
     rigidBody.applyTorqueImpulse(new RAPIER.Vector3(
-        Math.random() * 2, Math.random() * 2, Math.random() * 2), true)
+        Math.random() * -3, Math.random() * -3, Math.random() * -3), true)
     const boxGeo = new THREE.BoxGeometry(2,2,2)
     const boxMat = new THREE.MeshToonMaterial({color: 0xff0000})
     const box = new THREE.Mesh(boxGeo, boxMat)
@@ -68,9 +62,6 @@
     light.position.set(0, 15, -7)
     scene.add(light)
 
-    // const loader = new GLTFLoader();
-    // const data = await loader.loadAsync('/src/assets/scene.gltf', (event) => console.log(event))
-    // scene.add(data.scene)
 
 
 
@@ -79,13 +70,12 @@
       const delta = time - prevTime
       const dir = camera.getWorldDirection(new THREE.Vector3())
 
-      world.timestep = delta / 1000
-      world.step()
+      physics.timestep = delta / 1000
+      physics.step()
 
 
       let rotation = rigidBody.rotation()
 
-      console.log('rigidBody rotation: ', rotation.x, rotation.y, rotation.z)
 
       if ($userInput.has('w')) {
         const relativeForward = dir.clone()
@@ -114,7 +104,7 @@
       if ($userInput.has(' ')) {
         camera.position.y += 0.005 * delta
       }
-      if ($userInput.has('Control')) {
+      if ($userInput.has('q')) {
         camera.position.y -= 0.005 * delta
       }
 
@@ -128,19 +118,19 @@
       box.position.y = rigidBody.translation().y
       box.position.z = rigidBody.translation().z
 
-      // const translation = rigidBody.translation()
-      // const boxPosition = new THREE.Vector3()
-      // box.getWorldPosition(boxPosition)
-      // boxPosition.set(translation.x, translation.y, translation.z)
-      // box.position.copy(boxPosition)
-
-
-      // console.log('box rotation: ', box.rotation)
 
       prevTime = time
       renderer.render(scene, camera)
     })
   })
+
+  function setSize() {
+    renderer.setSize(window.innerWidth, window.innerHeight)
+    camera.aspect = window.innerWidth / window.innerHeight
+    camera.updateProjectionMatrix()
+    canvas.height = window.innerHeight
+    canvas.width = window.innerWidth
+  }
 
   /** @param event {PointerEvent} */
   function onpointermove(event) {
@@ -185,6 +175,8 @@
   on:mousedown={() => canvas.requestPointerLock()}
   tabindex="1"
 ></canvas>
+
+<Plane/>
 
 <style>
   canvas {
