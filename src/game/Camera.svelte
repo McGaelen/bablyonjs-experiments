@@ -64,19 +64,3 @@
     currentCamera.set(null)
   })
 </script>
-
-<h3>Camera</h3>
-
-<div class="ml-5">
-  <span>Rotation:</span>
-  <span><b>X: </b>{camera?.getWorldDirection(new THREE.Vector3()).x.toFixed(3)}</span>
-  <span><b>Y: </b>{camera?.getWorldDirection(new THREE.Vector3()).y.toFixed(3)}</span>
-  <span><b>Z: </b>{camera?.getWorldDirection(new THREE.Vector3()).z.toFixed(3)}</span>
-</div>
-
-<div class="ml-5">
-  <span>Position:</span>
-  <span><b>X: </b>{camera?.position.x.toFixed(3)}</span>
-  <span><b>Y: </b>{camera?.position.y.toFixed(3)}</span>
-  <span><b>Z: </b>{camera?.position.z.toFixed(3)}</span>
-</div>

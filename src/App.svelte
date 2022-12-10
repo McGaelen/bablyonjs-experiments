@@ -2,15 +2,12 @@
   import {onMount} from "svelte";
   import {keyboard} from "./lib/input/keyboard.store.js"
   import * as THREE from 'three'
-  import Plane from "./game/Plane.svelte";
-  import DroppedCube from "./game/DroppedCube.svelte";
   import {scene} from "./lib/graphics/scene.js";
   import {gameClock} from "./lib/clock/gameClock.store.js";
-  import Light from "./game/Light.svelte";
   import {currentCamera} from "./lib/graphics/currentCamera.store.js";
-  import Camera from "./game/Camera.svelte";
   import {pointerMove} from "./lib/input/pointermove.store.js";
   import Manifest from "./Manifest.svelte";
+  import UI from "./UI.svelte";
 
   /** @type THREE.WebGLRenderer */
   let renderer
@@ -45,16 +42,10 @@
 
 </script>
 
-<Manifest/>
+<UI />
+<Manifest />
 
 <svelte:window on:load={setSize} on:resize={setSize}/>
-
-<h1>Frame Time: {$gameClock?.toFixed(3)}ms</h1>
-
-<button
-  class="rounded border-white border-2"
-  on:click={() => document.body.requestFullscreen()}
->Fullscreen</button>
 
 <canvas
   class="absolute top-0 left-0 bg-black z-[-1] touch-none focus:outline-0"
