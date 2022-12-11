@@ -1,5 +1,5 @@
 {
-  "name": "test-threejs",
+  "name": "babylonjs-experiments",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,7 +10,6 @@
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^1.1.0",
-    "@types/three": "^0.146.0",
     "autoprefixer": "^10.4.7",
     "postcss": "^8.4.14",
     "postcss-load-config": "^4.0.1",
@@ -23,7 +22,6 @@
     "@babylonjs/controls": "^2.0.0-alpha.1",
     "@babylonjs/core": "^5.37.0",
     "@babylonjs/post-processes": "^5.37.0",
-    "@dimforge/rapier3d-compat": "^0.10.0",
-    "three": "^0.147.0"
+    "@dimforge/rapier3d-compat": "^0.10.0"
   }
 }

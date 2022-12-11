@@ -1,21 +1,14 @@
 <script>
-  import * as THREE from "three";
   import {gameClock} from "../lib/clock/gameClock.store.js";
   import {keyboard} from "../lib/input/keyboard.store.js";
-  import {currentCamera} from "../lib/graphics/currentCamera.store.js";
   import {pointerMove} from "../lib/input/pointermove.store.js";
-  import {onDestroy} from "svelte";
+  import {getContext, onMount} from "svelte";
+  import {Axis, Quaternion, Vector3 as BVector3} from "@babylonjs/core";
 
-  /** @type THREE.PerspectiveCamera */
-  let camera = new THREE.PerspectiveCamera(75, 1, 0.1, 1000)
-  camera.rotation.order = "YXZ"
-  camera.position.z = 7
-  camera.position.y = -5
-  camera.rotation.x = -0.7
-  camera.aspect = window.innerHeight / window.innerWidth
-  camera.rotation
-  currentCamera.set(camera)
+  /** @type GameContext */
+  const game = getContext('game')
 
+  /** @param direction {BVector3}*/
   function calculateNewPosition(direction) {
     const worldAngle = Math.atan(direction.z / direction.x)
     const newX = Math.cos(worldAngle) * Math.sign(direction.x)
@@ -24,59 +17,70 @@
   }
 
   const clock = gameClock.subscribe((delta) => {
-    const dir = camera.getWorldDirection(new THREE.Vector3())
+    if (!game.camera) return
+    const dir = game.camera.getDirection(Axis.Z)
+
 
     if ($keyboard.has('w')) {
+      console.log('w')
       const [x, z] = calculateNewPosition(dir.clone())
-      camera.position.addScaledVector(
-          new THREE.Vector3(x, 0, z), 0.005 * delta
-      )
+      // game.camera.position.addScaledVector(
+      //     new THREE.Vector3(x, 0, z), 0.005 * delta
+      // )
+      game.camera.position.add(new BVector3(x, 0, z).scale(0.005 * delta))
+      // game.camera.position.z += 0.005 * delta
+      // game.camera.
     }
     if ($keyboard.has('s')) {
-      const relativeBack = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI)
+      const relativeBack = dir.clone().applyRotationQuaternion(Quaternion.FromEulerAngles(0, Math.PI, 0))
       const [x, z] = calculateNewPosition(relativeBack)
-      camera.position.addScaledVector(
-          new THREE.Vector3(x, 0, z), 0.005 * delta
-      )
+      game.camera.position.add(new BVector3(x, 0, z).scale(0.005 * delta))
     }
-    if ($keyboard.has('a')) {
-      const relativeLeft = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
-      const [x, z] = calculateNewPosition(relativeLeft)
-      camera.position.addScaledVector(
-          new THREE.Vector3(x, 0, z), 0.005 * delta
-      )
-    }
-    if ($keyboard.has('d')) {
-      const relativeRight = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (3 * Math.PI) / 2)
-      const [x, z] = calculateNewPosition(relativeRight)
-      camera.position.addScaledVector(
-          new THREE.Vector3(x, 0, z), 0.005 * delta
-      )
-    }
+    // if ($keyboard.has('a')) {
+    //   const relativeLeft = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2)
+    //   const [x, z] = calculateNewPosition(relativeLeft)
+    //   game.camera.position.addScaledVector(
+    //       new THREE.Vector3(x, 0, z), 0.005 * delta
+    //   )
+    // }
+    // if ($keyboard.has('d')) {
+    //   const relativeRight = dir.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), (3 * Math.PI) / 2)
+    //   const [x, z] = calculateNewPosition(relativeRight)
+    //   game.camera.position.addScaledVector(
+    //       new THREE.Vector3(x, 0, z), 0.005 * delta
+    //   )
+    // }
     if ($keyboard.has(' ')) {
-      camera.position.y += 0.005 * delta
+      game.camera.position.y += 0.005 * delta
     }
     if ($keyboard.has('q')) {
-      camera.position.y -= 0.005 * delta
+      game.camera.position.y -= 0.005 * delta
     }
-  })
 
-  const pointer = pointerMove.subscribe((event) => {
-    const newX = camera.rotation.x - (event.movementY * 0.005)
-    camera.rotation.set(
-        // To stop the camera from going upside down, we have to clamp rotation around
-        // the x-axis to not go passed pi/2 in either direction.
-        newX >= -(Math.PI / 2) && newX <= (Math.PI / 2)
-            ? newX
-            : camera.rotation.x,
-        camera.rotation.y - (event.movementX * 0.005),
-        0
-    )
-  })
-
-  onDestroy(() => {
-    clock()
-    pointer()
-    currentCamera.set(null)
+    const pointer = pointerMove.subscribe((event) => {
+      if (!game.camera) return
+      // console.log({x: game.camera.rotation.x, z: game.camera.rotation.z})
+      const newX = game.camera.rotation.x - (event.movementY * 0.005)
+      // game.camera.rotation.set(
+          // To stop the game.camera from going upside down, we have to clamp rotation around
+          // the x-axis to not go passed pi/2 in either direction.
+          // newX >= -(Math.PI / 2) && newX <= (Math.PI / 2)
+          //     ? newX
+          //     : game.camera.rotation.x,
+          // game.camera.rotation.y - (event.movementX * 0.005),
+          // 0
+      // )
+      game.camera.rotationQuaternion = Quaternion.FromEulerAngles(
+          newX >= -(Math.PI / 2) && newX <= (Math.PI / 2)
+              ? newX
+              : game.camera.rotation.x,
+          game.camera.rotation.y - (event.movementX * 0.005),
+          0
+      )
+    })
+    return () => {
+      clock()
+      pointer()
+    }
   })
 </script>

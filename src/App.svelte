@@ -1,45 +1,63 @@
 <script>
-  import {onMount} from "svelte";
+  import {onMount, setContext} from "svelte";
   import {keyboard} from "./lib/input/keyboard.store.js"
-  import * as THREE from 'three'
-  import {scene} from "./lib/graphics/scene.js";
   import {gameClock} from "./lib/clock/gameClock.store.js";
-  import {currentCamera} from "./lib/graphics/currentCamera.store.js";
   import {pointerMove} from "./lib/input/pointermove.store.js";
   import Manifest from "./Manifest.svelte";
   import UI from "./UI.svelte";
+  import {
+    Engine,
+    Scene,
+    UniversalCamera,
+    Vector3 as BVector3,
+    HemisphericLight,
+    MeshBuilder,
+  } from "@babylonjs/core";
 
-  /** @type THREE.WebGLRenderer */
-  let renderer
+  /** @type Engine */
+  let engine
   /** @type HTMLCanvasElement */
   let canvas
+  /** @type Scene */
+  let scene
+  /** @type UniversalCamera */
+  let camera
+
+  setContext('game', /** @type GameContext */ {
+    get engine() { return engine },
+    get canvas() { return canvas },
+    get scene() { return scene },
+    get camera() { return camera },
+  })
 
   onMount(() => {
-    renderer = new THREE.WebGLRenderer({canvas});
-    renderer.shadowMap.enabled = true
+    engine = new Engine(canvas.getContext('webgl2'), true)
+    scene = new Scene(engine)
+
+    camera = new UniversalCamera('camera', new BVector3(0, 5, -10), scene)
+    camera.setTarget(BVector3.Zero())
+
+    let light = new HemisphericLight('light', new BVector3(0, 1, 0), scene)
+    light.intensity = 0.7
+
+    let sphere = MeshBuilder.CreateSphere('sphere', {diameter: 2, segments: 32}, scene)
+    sphere.position.y = 1
+
+    let ground = MeshBuilder.CreateGround('ground', {width: 6, height: 6}, scene)
 
     setSize()
 
-    renderer.setAnimationLoop((time) => {
-      gameClock.tick(time)
-      if ($currentCamera) {
-        renderer.render(scene, $currentCamera)
-      }
+    engine.runRenderLoop(() => {
+      gameClock.tick()
+      scene.render()
     })
   })
 
   function setSize() {
-    renderer.setSize(window.innerWidth, window.innerHeight)
-
     canvas.height = window.innerHeight
     canvas.width = window.innerWidth
-
-    if ($currentCamera) {
-      $currentCamera.aspect = window.innerWidth / window.innerHeight
-      $currentCamera.updateProjectionMatrix()
-    }
+    engine.resize()
   }
-
 </script>
 
 <UI />
@@ -53,7 +71,7 @@
   on:pointermove={pointerMove.bindToPointermove}
   on:keyup={keyboard.bindToKeyup}
   on:keydown={keyboard.bindToKeydown}
-  on:mousedown={() => canvas.requestPointerLock()}
+  on:click={() => canvas.requestPointerLock()}
   tabindex="1"
 ></canvas>
 
