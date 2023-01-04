@@ -2,7 +2,7 @@
   import {gameClock} from "../lib/clock/gameClock.store.js";
   import {keyboard} from "../lib/input/keyboard.store.js";
   import {pointerMove} from "../lib/input/pointermove.store.js";
-  import {getContext, onMount} from "svelte";
+  import {getContext, onDestroy, onMount} from "svelte";
   import {Axis, Quaternion, Vector3 as BVector3} from "@babylonjs/core";
 
   /** @type GameContext */
@@ -22,7 +22,6 @@
 
 
     if ($keyboard.has('w')) {
-      console.log('w')
       const [x, z] = calculateNewPosition(dir.clone())
       game.camera.position = game.camera.position.add(
           new BVector3(x, 0, z).scale(0.005 * delta)
@@ -55,25 +54,24 @@
     if ($keyboard.has('q')) {
       game.camera.position.y -= 0.005 * delta
     }
+  })
 
-    const pointer = pointerMove.subscribe((event) => {
-      if (!game.camera) return
-      // console.log({x: game.camera.rotation.x, z: game.camera.rotation.z})
-      const newX = game.camera.rotation.x - (event.movementY * 0.00001)
-      game.camera.rotation.set(
-          // To stop the game.camera from going upside down, we have to clamp rotation around
-          // the x-axis to not go passed pi/2 in either direction.
-          newX >= -(Math.PI / 2) && newX <= (Math.PI / 2)
-              ? newX
-              : game.camera.rotation.x,
-          game.camera.rotation.y - (event.movementX * 0.00001),
-          0
-      )
-    })
+  const pointer = pointerMove.subscribe((event) => {
+    if (!game.camera) return
+    const newX = game.camera.rotation.x - (event.movementY * -0.003)
+    game.camera.rotation.set(
+        // To stop the game.camera from going upside down, we have to clamp rotation around
+        // the x-axis to not go passed pi/2 in either direction.
+        newX >= -(Math.PI / 2) && newX <= (Math.PI / 2)
+            ? newX
+            : game.camera.rotation.x,
+        game.camera.rotation.y - (event.movementX * -0.003),
+        0
+    )
+  })
 
-    return () => {
-      clock()
-      pointer()
-    }
+  onDestroy(() => {
+    clock()
+    pointer()
   })
 </script>
