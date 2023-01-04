@@ -8,16 +8,23 @@
   //   direction = $currentCamera?.getWorldDirection(new THREE.Vector3())
   //   position = $currentCamera?.position
   // })
+
+  import {getContext} from "svelte";
+
+  let game = getContext('game')
+  $: x = game.camera?.getDirection().x.toFixed(3)
+  $: y = game.camera?.getDirection().y.toFixed(3)
+  $: z = game.camera?.getDirection().z.toFixed(3)
 </script>
 
 <!--<h3>Camera</h3>-->
 
-<!--<div class="ml-5">-->
-<!--  <span>Rotation:</span>-->
-<!--  <span><b>X: </b>{direction?.x.toFixed(3)}</span>-->
-<!--  <span><b>Y: </b>{direction?.y.toFixed(3)}</span>-->
-<!--  <span><b>Z: </b>{direction?.z.toFixed(3)}</span>-->
-<!--</div>-->
+<div class="ml-5">
+  <span>Rotation:</span>
+  <span><b>X: </b>{x}</span>
+  <span><b>Y: </b>{y}</span>
+  <span><b>Z: </b>{z}</span>
+</div>
 
 <!--<div class="ml-5">-->
 <!--  <span>Position:</span>-->
